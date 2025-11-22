@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="160" height="100" role="img" aria-hidden="true">
+  <title>Pill and magnifier illustration</title>
+  <rect x="6" y="22" width="110" height="44" rx="22" fill="#2563eb" opacity="0.12"/>
+  <rect x="10" y="26" width="88" height="36" rx="18" fill="#ffffff"/>
+  <circle cx="116" cy="68" r="18" stroke="#2563eb" stroke-width="6" fill="rgba(37,99,235,0.06)" />
+  <line x1="128" y1="80" x2="150" y2="102" stroke="#2563eb" stroke-width="6" stroke-linecap="round" />
+</svg>

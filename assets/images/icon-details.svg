@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" role="img" aria-hidden="true">
+  <title>Details icon</title>
+  <rect x="7" y="3" width="10" height="4" rx="1" stroke="#2563eb" stroke-width="2" fill="none"/>
+  <path d="M3 7h18" stroke="#2563eb" stroke-width="2" stroke-linecap="round" />
+  <path d="M7 7v10a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V7" stroke="#2563eb" stroke-width="2" fill="none"/>
+</svg>

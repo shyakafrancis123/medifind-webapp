@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" role="img" aria-hidden="true">
+  <title>Customize icon</title>
+  <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="#2563eb" stroke-width="2" fill="none"/>
+  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06" stroke="#2563eb" stroke-width="1.2" fill="none"/>
+</svg>

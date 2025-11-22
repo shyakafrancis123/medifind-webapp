@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" role="img" aria-hidden="true">
+  <title>Search icon</title>
+  <circle cx="11" cy="11" r="6" stroke="#2563eb" stroke-width="2" fill="rgba(37,99,235,0.06)" />
+  <line x1="21" y1="21" x2="16" y2="16" stroke="#2563eb" stroke-width="2" stroke-linecap="round" />
+</svg>

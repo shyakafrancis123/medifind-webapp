@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediFind: Medication & Drug Information Finder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header with Navigation -->
+  <header class="site-header">
+    <div class="brand brand-outside">
+      <div class="brand-text">
+        <h1 class="brand-title">MediFind</h1>
+        <div class="tagline">Find medication and drug information instantly</div>
+      </div>
+    </div>
+    <div class="container header-flex">
+      <nav class="main-nav">
+        <ul class="nav-list">
+          <li><a href="#search" class="nav-link active" data-section="search">Search</a></li>
+          <li><a href="#favorites" class="nav-link" data-section="favorites">Favorites</a></li>
+          <li><a href="#about" class="nav-link" data-section="about">About</a></li>
+          <li><a href="#settings" class="nav-link" data-section="settings">Settings</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <label class="dark-mode-toggle">
+          <input type="checkbox" id="darkModeToggle">
+          <span>Dark Mode</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- SEARCH SECTION -->
+    <section id="search" class="section active" data-section-name="search">
+      <div class="container">
+        <h2 class="section-title">Search Medications</h2>
+        
+        <div class="search-panel">
+          <div class="search-row">
+            <input id="searchInput" type="search" placeholder="Search medication name..." autocomplete="off">
+            <button id="searchBtn" type="button">
+              <span class="btn-text">Search</span>
+              <span class="btn-spinner hidden" aria-hidden="true">
+                <span class="spinner small" aria-hidden="true"></span>
+              </span>
+            </button>
+          </div>
+          
+          <div class="controls controls-flex">
+            <div class="control-group">
+              <label for="sortSelect">Sort:</label>
+              <select id="sortSelect">
+                <option value="brand_asc">Brand Name (A-Z)</option>
+                <option value="brand_desc">Brand Name (Z-A)</option>
+                <option value="approval_desc">Latest Approval</option>
+                <option value="approval_asc">Earliest Approval</option>
+              </select>
+            </div>
+            
+            <div class="control-group">
+              <label><input type="checkbox" id="filterRecalls"> Recalls only</label>
+              <label><input type="checkbox" id="filterWarnings"> Warnings only</label>
+              <label><input type="checkbox" id="filterSideEffects"> Has Side Effects</label>
+            </div>
+            
+            <div class="control-group">
+              <label for="manufacturerSelect">Manufacturer:</label>
+              <select id="manufacturerSelect"><option value="">All</option></select>
+            </div>
+            
+            <div class="control-group">
+              <label for="filterInput">Filter:</label>
+              <input type="text" id="filterInput" placeholder="Filter results...">
+            </div>
+            
+            <div class="control-group">
+              <label><input type="checkbox" id="filterPrescription"> Prescription Only</label>
+            </div>
+          </div>
+          
+          <div class="search-status-row">
+            <div id="feedback" class="small" style="color:#2563eb;"></div>
+            <div id="errorContainer" class="small hidden" style="color:#c23939;"></div>
+          </div>
+        </div>
+
+        <div class="results-section">
+          <h3>Results</h3>
+          <div id="resultsContainer" class="results-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAVORITES SECTION -->
+    <section id="favorites" class="section" data-section-name="favorites">
+      <div class="container">
+        <h2 class="section-title">My Favorites</h2>
+        
+        <div class="favorites-panel">
+          <p class="section-description">Your saved medications appear here for quick access.</p>
+          <ul id="favoritesList" class="favorites-list-content"></ul>
+          <div id="noFavorites" class="empty-state">
+            <p>No favorites yet. Search for medications and save them for quick access.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT SECTION -->
+    <section id="about" class="section" data-section-name="about">
+      <div class="container">
+        <h2 class="section-title">About MediFind</h2>
+        
+        <div class="about-hero">
+          <div class="hero-grid">
+            <div class="hero-content">
+              <h3>Your Medication Information Hub</h3>
+              <p class="lead">Quickly find comprehensive medication information including indications, dosages, warnings, approvals, and recall history.</p>
+              
+              <p>Designed for clinicians, pharmacists, and patients who need reliable medication data fast. Preferences and favorites are stored locally for your convenience.</p>
+              
+              <div class="feature-highlights">
+                <h4>Key Features:</h4>
+                <ul class="modal-section-list">
+                  <li>Search by brand or generic name with instant filtering</li>
+                  <li>View indications, warnings, side effects, and dosage information</li>
+                  <li>Track medication recalls and approval history</li>
+                  <li>Save favorites for quick access</li>
+                  <li>Dark mode and customizable display preferences</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="hero-card card pretty">
+              <h3>Data Source</h3>
+              <ul class="modal-section-list">
+                <li><strong>Primary API:</strong> OpenFDA</li>
+                <li><strong>Storage:</strong> Local browser storage</li>
+                <li><strong>Privacy:</strong> No data sent to external servers</li>
+                <li><strong>Accessibility:</strong> WCAG 2.1 compliant</li>
+              </ul>
+              
+              <h4 style="margin-top: 16px;">Disclaimer</h4>
+              <p class="small">This tool aggregates publicly available data. While we strive for accuracy, data can be incomplete or delayed. This is for informational purposes only and not a substitute for professional medical advice.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="features-section">
+          <h3>How It Works</h3>
+          <div class="features-grid">
+            <div class="feature-card card pretty">
+              <div class="feature-head">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2" fill="none"></circle>
+                    <line x1="20" y1="20" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+                  </svg>
+                </div>
+                <h4>Search</h4>
+              </div>
+              <p class="small">Enter a medication name (brand or generic) to search FDA databases instantly.</p>
+            </div>
+            
+            <div class="feature-card card pretty">
+              <div class="feature-head">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"></rect>
+                    <path d="M8 8h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                    <path d="M8 12h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </div>
+                <h4>Filter & Sort</h4>
+              </div>
+              <p class="small">Use advanced filters to narrow results by manufacturer, recalls, warnings, and more.</p>
+            </div>
+            
+            <div class="feature-card card pretty">
+              <div class="feature-head">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" stroke="currentColor" stroke-width="0" fill="currentColor"></path>
+                  </svg>
+                </div>
+                <h4>Save Favorites</h4>
+              </div>
+              <p class="small">Bookmark frequently accessed medications for quick reference.</p>
+            </div>
+            
+            <div class="feature-card card pretty">
+              <div class="feature-head">
+                <div class="feature-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 3a9 9 0 100 18 9 9 0 000-18zm1.5 5.25a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7.5 12a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM16.5 12a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" fill="currentColor"></path>
+                  </svg>
+                </div>
+                <h4>Customize</h4>
+              </div>
+              <p class="small">Personalize display with dark mode, font size, and sort preferences.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-card card pretty">
+          <h3>Contact & Support</h3>
+          <p><strong>Developer:</strong> shyakafrancis123</p>
+          <p class="small">To report bugs or suggest improvements, please open an issue in the project repository with details and reproduction steps.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS SECTION -->
+    <section id="settings" class="section" data-section-name="settings">
+      <div class="container">
+        <h2 class="section-title">Settings</h2>
+        
+        <div class="settings-panel">
+          <div class="settings-group card pretty">
+            <h3>Display Preferences</h3>
+            
+            <div class="form-group">
+              <label for="fontSizeSelect">Font Size:</label>
+              <select id="fontSizeSelect">
+                <option value="normal">Normal</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="defaultSortSelect">Default Sort Order:</label>
+              <select id="defaultSortSelect">
+                <option value="brand_asc">Brand Name (A-Z)</option>
+                <option value="brand_desc">Brand Name (Z-A)</option>
+                <option value="approval_desc">Latest Approval</option>
+                <option value="approval_asc">Earliest Approval</option>
+              </select>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="autoSearchToggle">
+                <span>Enable auto-search on typing</span>
+              </label>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="showRecallsToggle">
+                <span>Always show recall information</span>
+              </label>
+            </div>
+            
+            <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+          </div>
+          
+          <div class="settings-group card pretty">
+            <h3>Data Management</h3>
+            
+            <div class="data-actions">
+              <button id="exportFavoritesBtn" class="btn btn-secondary">Export Favorites</button>
+              <button id="importFavoritesBtn" class="btn btn-secondary">Import Favorites</button>
+              <input type="file" id="importFileInput" accept=".json" style="display: none;">
+              <button id="clearCacheBtn" class="btn btn-secondary">Clear Cache</button>
+              <button id="clearAllDataBtn" class="btn btn-danger">Clear All Data</button>
+            </div>
+            
+            <p class="small" style="margin-top: 16px; color: #64748b;">
+              <strong>Note:</strong> All data is stored locally in your browser. Clearing browser data will remove all favorites and settings.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      &copy; 2025 MediFind. Powered by OpenFDA.
+    </div>
+  </footer>
+
+  <!-- Drug Detail Modal (dynamically injected) -->
+  <div id="drugDetailModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" aria-label="Close">&times;</button>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/chart.min.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    // Apply saved settings on page load
+    (function() {
+      const SETTINGS_KEY = 'medifind_settings_v2';
+      const DEFAULTS = {
+        darkMode: false,
+        sortOrder: 'brand_asc',
+        autoSearch: true,
+        showRecalls: true,
+        fontSize: 'normal'
+      };
+      
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+        } catch (e) { 
+          return { ...DEFAULTS }; 
+        }
+      }
+      
+      const settings = loadSettings();
+      if (settings.darkMode) document.body.classList.add('dark-mode');
+      else document.body.classList.remove('dark-mode');
+      document.body.style.fontSize = settings.fontSize === 'large' ? '1.18em' : '';
+    })();
+  </script>
+</body>
+</html>
