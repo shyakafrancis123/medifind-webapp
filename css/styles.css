@@ -1879,3 +1879,77 @@ body.dark-mode {
 /* subtle footer polish */
 .site-footer { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-top: 1px solid rgba(15,23,42,0.03); }
 
+/* Responsive header/nav fixes: ensure stacked, ordered layout on small screens */
+@media (max-width: 820px) {
+  /* Make header controls flow naturally instead of absolute positioning */
+  .header-flex {
+    position: static !important;
+    transform: none !important;
+    top: auto !important;
+    right: auto !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Brand should sit above nav when space is constrained */
+  .brand-outside {
+    position: static !important;
+    transform: none !important;
+    margin-bottom: 8px;
+  }
+
+  .site-header > .container {
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+  }
+
+  .main-nav .nav-list {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .main-nav .nav-link {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+
+  .header-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 6px;
+  }
+
+  /* Keep dark-mode toggle aligned to the right inside header-actions */
+  .dark-mode-toggle { margin-left: auto; }
+}
+
+/* Tight mobile adjustments (phones) */
+@media (max-width: 480px) {
+  .brand-title { font-size: 1.4rem !important; }
+
+  /* Stack favorites content so buttons move under the title */
+  .favorites-list .fav-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .favorites-list .fav-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Make nav links a little larger tappable targets */
+  .main-nav .nav-link {
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+}
+
