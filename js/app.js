@@ -1,8 +1,35 @@
+// Clear error message from UI
+function clearError() {
+  if (errorContainer) {
+    errorContainer.textContent = '';
+    errorContainer.classList.add('hidden');
+  }
+  // Optionally hide modal if open
+  if (typeof hideModal === 'function') hideModal();
+}
+// Show an error message in the UI
+function showError(msg) {
+  if (errorContainer) {
+    errorContainer.textContent = msg || '';
+    errorContainer.classList.remove('hidden');
+  }
+}
+
+// Update a small feedback area (non-critical messages)
+function setFeedback(msg) {
+  if (feedback) {
+    feedback.textContent = msg || '';
+  }
+}
 // Main UI wiring for client-only MediFind
 // No imports; use global functions
 
+
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+// Settings and state (move this up so appSettings is always defined)
+const appSettings = window.getAppSettings();
 
 const searchInput = $('#searchInput');
 const searchBtn = $('#searchBtn');
@@ -15,148 +42,104 @@ const filterWarnings = $('#filterWarnings');
 const filterInput = $('#filterInput');
 const favoritesList = $('#favoritesList');
 const feedback = $('#feedback');
-
-let currentResults = [];
-let displayedResults = [];
-
-// Remove legacy modal logic for About/Settings
-// Modal elements for drug details only
-let modal = null;
-function ensureModal() {
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.className = 'modal hidden';
-    modal.innerHTML = `<div class="modal-content"><button class="modal-close" aria-label="Close details">&times;</button><div class="modal-body"></div></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector('.modal-close').addEventListener('click', hideModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
-  }
-}
-function showModal(html) {
-  ensureModal();
-  modal.querySelector('.modal-body').innerHTML = html;
-  modal.classList.remove('hidden');
-}
-function hideModal() {
-  if (modal) modal.classList.add('hidden');
-}
-
+let debounceTimer = null;
 function showLoading(on = true) {
-  // disable the search button while loading and show inline spinner (keep button text stable)
+  // Keep the search button disabled while loading and show an inline spinner if present
   if (searchBtn) {
     const spinner = searchBtn.querySelector('.btn-spinner');
-    if (on) {
-      searchBtn.disabled = true;
-      if (spinner) spinner.classList.remove('hidden');
-    } else {
-      searchBtn.disabled = false;
-      if (spinner) spinner.classList.add('hidden');
+    searchBtn.disabled = !!on;
+    if (spinner) {
+      if (on) spinner.classList.remove('hidden'); else spinner.classList.add('hidden');
     }
   }
 }
-function showError(msg) {
-  errorContainer.textContent = msg;
-  errorContainer.classList.remove('hidden');
-}
-function clearError() {
-  errorContainer.textContent = '';
-  errorContainer.classList.add('hidden');
-  hideModal();
-}
-function setFeedback(msg) {
-  feedback.textContent = msg;
-  // No auto-hide; message stays until next update
-}
 
-// Settings and state
-const appSettings = window.getAppSettings();
-let debounceTimer = null;
-let manufacturerSelect = $('#manufacturerSelect');
-let filterSideEffects = $('#filterSideEffects');
-let filterPrescription = $('#filterPrescription');
-let darkModeToggle = $('#darkModeToggle');
-let helpBtn = $('#helpBtn');
-let settingsBtn = $('#settingsBtn');
-
-function applyDarkMode() {
-  if (appSettings.darkMode) {
-    document.body.classList.add('dark-mode');
-    darkModeToggle.checked = true;
-  } else {
-    document.body.classList.remove('dark-mode');
-    darkModeToggle.checked = false;
-  }
+function renderCard(drug, searchTerm) {
+  const div = document.createElement('div');
+  div.className = 'card pretty';
+  const title = highlight(searchTerm, `${drug.brand_name}${drug.generic_name && drug.generic_name !== 'N/A' ? '  ' + drug.generic_name : ''}`);
+  const manufacturer = (drug.raw && drug.raw.openfda && drug.raw.openfda.manufacturer_name) ? drug.raw.openfda.manufacturer_name.join(', ') : 'Information not available';
+  const approvalDate = (drug.approvals && drug.approvals.length && drug.approvals[0].products && drug.approvals[0].products[0] && drug.approvals[0].products[0].submission && drug.approvals[0].products[0].submission.date) ? drug.approvals[0].products[0].submission.date : 'Information not available';
+  div.innerHTML = `
+    <h3>${title}</h3>
+    <div class="meta small">Manufacturer: ${escapeHtml(manufacturer)}</div>
+    <div class="meta small">Approval Date: ${escapeHtml(approvalDate)}</div>
+    ${renderTags(drug)}
+    <details>
+      <summary>Indications</summary>
+      <div>${highlight(searchTerm, drug.indications || 'Information not available')}</div>
+    </details>
+    <details>
+      <summary>Dosage</summary>
+      <div>${highlight(searchTerm, drug.dosage || 'Information not available')}</div>
+    </details>
+    <details>
+      <summary>Side Effects</summary>
+      <div>${highlight(searchTerm, drug.side_effects || 'Information not available')}</div>
+    </details>
+    <details>
+      <summary>Warnings</summary>
+      <div>${highlight(searchTerm, drug.warnings || 'Information not available')}</div>
+    </details>
+    <details>
+      <summary>Recalls</summary>
+      <div>${drug.recalls && drug.recalls.length ? drug.recalls.map(r => `<div><strong>${escapeHtml(r.recall_number)}</strong>: ${escapeHtml(r.reason_for_recall)} (${escapeHtml(r.status)})</div>`).join('') : 'None'}</div>
+    </details>
+    <div class="actions">
+      <button class="btn primary btn-fav">${window.isFavorite(drug.id) ? 'Saved' : 'Save'}</button>
+      <button class="btn btn-view">View</button>
+    </div>
+  `;
+  // button handlers
+  const favBtn = div.querySelector('.btn-fav');
+  favBtn.addEventListener('click', () => {
+    if (window.isFavorite(drug.id)) {
+      window.removeFavorite(drug.id);
+      favBtn.textContent = 'Save';
+      setFeedback('Removed from favorites');
+    } else {
+      window.addFavorite({ id: drug.id, brand_name: drug.brand_name, generic_name: drug.generic_name });
+      favBtn.textContent = 'Saved';
+      setFeedback('Saved to favorites');
+    }
+    renderFavorites();
+  });
+  const viewBtn = div.querySelector('.btn-view');
+  viewBtn.addEventListener('click', () => {
+    showModal(`
+      <div class="modal-section">
+        <h2 style="color:#b91c1c; margin-bottom:8px;">${escapeHtml(drug.brand_name)}${drug.generic_name && drug.generic_name !== 'N/A' ? '  ' + escapeHtml(drug.generic_name) : ''}</h2>
+        <div class="meta small">Manufacturer: ${escapeHtml(manufacturer)}</div>
+        <div class="meta small">Approval Date: ${escapeHtml(approvalDate)}</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Indications</div>
+        ${highlight(searchTerm, drug.indications || 'Information not available')}
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Warnings</div>
+        ${highlight(searchTerm, drug.warnings || 'Information not available')}
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Side Effects</div>
+        ${highlight(searchTerm, drug.side_effects || 'Information not available')}
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Dosage</div>
+        ${highlight(searchTerm, drug.dosage || 'Information not available')}
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Approvals</div>
+        <div>${drug.approvals && drug.approvals.length ? drug.approvals.map(a => escapeHtml(String(a.application_number || a.sponsor_name))).join(', ') : 'Information not available'}</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Recalls</div>
+        <div>${drug.recalls && drug.recalls.length ? drug.recalls.map(r => `<div><strong>${escapeHtml(r.recall_number)}</strong>: ${escapeHtml(r.reason_for_recall)} (${escapeHtml(r.status)})</div>`).join('') : 'None'}</div>
+      </div>
+    `);
+  });
+  return div;
 }
-applyDarkMode();
-darkModeToggle.addEventListener('change', () => {
-  appSettings.darkMode = darkModeToggle.checked;
-  window.saveAppSettings(appSettings);
-  applyDarkMode();
-});
-
-// Help/About modal
-document.addEventListener('DOMContentLoaded', function() {
-  let helpBtn = document.getElementById('helpBtn');
-  let settingsBtn = document.getElementById('settingsBtn');
-  if (helpBtn) {
-    helpBtn.removeEventListener('click', function() {
-      window.showAppModal('helpModal', `
-        <h2>About MediFind</h2>
-        <p>This app helps you find medication and drug information using OpenFDA data.</p>
-        <ul>
-          <li>Search by brand or generic name</li>
-          <li>View indications, warnings, side effects, dosage, recalls, and approvals</li>
-          <li>Filter and sort results, highlight keywords</li>
-          <li>Dark mode, settings, and favorites</li>
-          <li>Data source: <a href='https://open.fda.gov/' target='_blank'>OpenFDA</a></li>
-          <li>Limitations: Data may be incomplete or outdated</li>
-          <li>Developer: shyakafrancis123</li>
-        </ul>
-      `);
-    });
-  }
-  if (settingsBtn) {
-    settingsBtn.removeEventListener('click', function() {
-      window.showAppModal('settingsModal', `
-        <h2>Settings</h2>
-        <form id='settingsForm'>
-          <label><input type='checkbox' name='darkMode' ${appSettings.darkMode ? 'checked' : ''}> Dark Mode</label><br>
-          <label>Default Sort Order:
-            <select name='sortOrder'>
-              <option value='brand_asc' ${appSettings.sortOrder==='brand_asc'?'selected':''}>Brand Name (A-Z)</option>
-              <option value='brand_desc' ${appSettings.sortOrder==='brand_desc'?'selected':''}>Brand Name (Z-A)</option>
-              <option value='approval_desc' ${appSettings.sortOrder==='approval_desc'?'selected':''}>Latest Approval</option>
-              <option value='approval_asc' ${appSettings.sortOrder==='approval_asc'?'selected':''}>Earliest Approval</option>
-            </select>
-          </label><br>
-          <label><input type='checkbox' name='autoSearch' ${appSettings.autoSearch ? 'checked' : ''}> Auto-search on Enter</label><br>
-          <label><input type='checkbox' name='showRecalls' ${appSettings.showRecalls ? 'checked' : ''}> Show Recall Info</label><br>
-          <label>Font Size:
-            <select name='fontSize'>
-              <option value='normal' ${appSettings.fontSize==='normal'?'selected':''}>Normal</option>
-              <option value='large' ${appSettings.fontSize==='large'?'selected':''}>Large</option>
-            </select>
-          </label>
-          <br><button type='submit' class='btn btn-primary'>Save</button>
-        </form>
-      `);
-      document.getElementById('settingsForm').onsubmit = function(e) {
-        e.preventDefault();
-        const f = e.target;
-        appSettings.darkMode = f.darkMode.checked;
-        appSettings.sortOrder = f.sortOrder.value;
-        appSettings.autoSearch = f.autoSearch.checked;
-        appSettings.showRecalls = f.showRecalls.checked;
-        appSettings.fontSize = f.fontSize.value;
-        window.saveAppSettings(appSettings);
-        applyDarkMode();
-        setFontSize();
-        document.getElementById('settingsModal').classList.add('hidden');
-        applyFiltersAndSort();
-      };
-    });
-  }
-});
 
 function setFontSize() {
   document.body.style.fontSize = appSettings.fontSize === 'large' ? '1.18em' : '';
@@ -278,26 +261,7 @@ function renderCard(drug, searchTerm) {
   return div;
 }
 
-function renderRecallChart(drug, inModal = false) {
-  const recalls = drug.recalls || [];
-  const years = recalls.map(r => r.recall_initiation_date ? r.recall_initiation_date.slice(0,4) : 'Unknown');
-  const freq = {};
-  years.forEach(y => { freq[y] = (freq[y]||0)+1; });
-  const labels = Object.keys(freq);
-  const data = Object.values(freq);
-  const chartId = inModal ? `recallChartModal-${drug.id}` : `recallChart-${drug.id}`;
-  const ctx = document.getElementById(chartId);
-  if (!ctx) return;
-  ctx.innerHTML = '<canvas></canvas>';
-  const canvas = ctx.querySelector('canvas');
-  if (window.Chart) {
-    new window.Chart(canvas.getContext('2d'), {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'Recalls per Year', data, backgroundColor: '#2563eb' }] },
-      options: { plugins: { legend: { display: false } } }
-    });
-  }
-}
+// Chart rendering removed
 
 function renderResults(list, searchTerm) {
   resultsContainer.innerHTML = '';
@@ -497,8 +461,16 @@ async function doSearch() {
     applyFiltersAndSort();
     setFeedback(`Found ${results.length} result${results.length === 1 ? '' : 's'}`);
   } catch (err) {
-    console.error('search error', err);
-    showError(err.message || 'Search failed. Try again.');
+    if (window && window.logger && window.logger.error) window.logger.error('search error', err);
+    // Show specific user-facing messages for expected cases
+    const msg = err && err.message ? err.message : 'Search failed. Try again.';
+    // If it's a developer/network error, provide an actionable banner
+    const lowLevel = !(msg && (msg.toLowerCase().includes('no medication') || msg.toLowerCase().includes('no results') || msg.toLowerCase().includes('please enter') || msg.toLowerCase().includes('rate limit')));
+    if (lowLevel && window && window.reportUserError) {
+      window.reportUserError('Search failed due to a network or server issue. Please try again in a moment.', err);
+    } else {
+      showError(msg);
+    }
     setFeedback('Found 0 results');
   } finally {
     showLoading(false);
@@ -610,7 +582,8 @@ function importFavoritesFromFile(file) {
       renderFavorites();
       setFeedback('Favorites imported');
     } catch (err) {
-      console.error('import error', err);
+      if (window && window.logger && window.logger.error) window.logger.error('import error', err);
+      if (window && window.reportUserError) window.reportUserError('Failed to import favorites. The file appears invalid.');
       setFeedback('Import failed: invalid file');
     }
   };
@@ -660,4 +633,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ensure settings form reflects current settings
   loadSettingsForm();
+
+  // immediate dark mode toggle: apply change instantly and persist
+  const immediateDarkToggle = document.getElementById('darkModeToggle');
+  if (immediateDarkToggle) {
+    immediateDarkToggle.addEventListener('change', function() {
+      const enabled = !!immediateDarkToggle.checked;
+      if (enabled) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+      // persist immediately
+      const s = window.getAppSettings ? window.getAppSettings() : {};
+      s.darkMode = enabled;
+      if (window.saveAppSettings) window.saveAppSettings(s);
+      // keep in-memory settings in sync
+      Object.assign(appSettings, s);
+      setFeedback(enabled ? 'Dark mode enabled' : 'Dark mode disabled');
+    });
+  }
 });

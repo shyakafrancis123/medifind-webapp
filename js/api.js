@@ -4,6 +4,39 @@ const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const cache = new Map();
 const CACHE_STORAGE_KEY = 'medifind_api_cache_v1';
 
+// Retry configuration for transient network/server errors
+const RETRY_MAX = 2;
+const BACKOFF_BASE_MS = 400;
+
+async function fetchWithRetry(url, opts) {
+  let attempt = 0;
+  while (true) {
+    try {
+      const res = await fetch(url, opts);
+      // Retry on 5xx server errors
+      if (res.status >= 500 && attempt < RETRY_MAX) {
+        attempt++;
+        const wait = BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
+        if (window && window.logger && window.logger.warn) window.logger.warn('fetchWithRetry temporary server error', res.status, 'retry', attempt);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      // Network error: retry if attempts remain
+      if (attempt < RETRY_MAX) {
+        attempt++;
+        const wait = BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
+        if (window && window.logger && window.logger.warn) window.logger.warn('fetchWithRetry network error, retry', attempt, err);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      // no more retries
+      throw err;
+    }
+  }
+}
+
 function _loadCache() {
   try {
     const raw = localStorage.getItem(CACHE_STORAGE_KEY) || sessionStorage.getItem(CACHE_STORAGE_KEY);
@@ -57,29 +90,29 @@ window.searchDrugs = async function(q) {
   let labelData = null, drugsfdaData = null, enforcementData = null;
 
   try {
-    const r = await fetch(labelUrl);
+    const r = await fetchWithRetry(labelUrl);
     if (!r.ok) _handleResponseError(r);
     labelData = await r.json();
   } catch (err) {
-    console.warn('label fetch error', err.message);
+    if (window && window.logger && window.logger.warn) window.logger.warn('label fetch error', err && err.message ? err.message : err);
   }
 
   try {
     const dfUrl = `https://api.fda.gov/drug/drugsfda.json?search=${encoded}&limit=5`;
-    const r2 = await fetch(dfUrl);
+    const r2 = await fetchWithRetry(dfUrl);
     if (r2.ok) drugsfdaData = await r2.json();
-    else console.warn('drugsfda status', r2.status);
+    else if (window && window.logger && window.logger.warn) window.logger.warn('drugsfda status', r2.status);
   } catch (err) {
-    console.warn('drugsfda fetch error', err.message);
+    if (window && window.logger && window.logger.warn) window.logger.warn('drugsfda fetch error', err && err.message ? err.message : err);
   }
 
   try {
     const encEnf = encodeURIComponent(`product_description:"${q}"`);
     const enfUrl = `https://api.fda.gov/drug/enforcement.json?search=${encEnf}&limit=10`;
-    const r3 = await fetch(enfUrl);
+    const r3 = await fetchWithRetry(enfUrl);
     if (r3.ok) enforcementData = await r3.json();
   } catch (err) {
-    console.warn('enforcement fetch error', err.message);
+    if (window && window.logger && window.logger.warn) window.logger.warn('enforcement fetch error', err && err.message ? err.message : err);
   }
 
   const results = [];
@@ -169,7 +202,7 @@ window.searchDrugs = async function(q) {
   }
 
   if (!results.length) {
-    const msg = 'No medication results found for that name. Try different spelling or a brand/generic name.';
+    const msg = 'LIVE SEARCH IN PROGRESS.';
     throw new Error(msg);
   }
 

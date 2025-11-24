@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MediFind: Medication & Drug Information Finder</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Small inline SVG favicon to avoid 404 requests for /favicon.ico -->
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232563eb'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-family='Poppins, Arial'>M</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -295,8 +297,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/chart.min.js"></script>
+  <!-- Chart.js removed -->
   <script src="js/storage.js"></script>
+  <script src="js/logger.js"></script>
+  <script src="js/error-handler.js"></script>
   <script src="js/api.js"></script>
   <script src="js/modal.js"></script>
   <script src="js/navigation.js"></script>

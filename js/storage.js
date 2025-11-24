@@ -27,7 +27,7 @@ class ReadingListManager {
         this.finished = data.finished || [];
       }
     } catch (error) {
-      console.error('Error loading from LocalStorage:', error);
+        if (window && window.logger && window.logger.error) window.logger.error('Error loading from LocalStorage:', error);
       // Initialize with empty arrays if parsing fails
       this.wantToRead = [];
       this.currentlyReading = [];
@@ -48,9 +48,10 @@ class ReadingListManager {
       };
       localStorage.setItem('bookscout_reading_lists', JSON.stringify(data));
     } catch (error) {
-      console.error('Error saving to LocalStorage:', error);
+      if (window && window.logger && window.logger.error) window.logger.error('Error saving to LocalStorage:', error);
       // Handle QuotaExceededError
-      if (error.name === 'QuotaExceededError') {
+      if (error && error.name === 'QuotaExceededError') {
+        if (window && window.reportUserError) window.reportUserError('Unable to save data — your browser storage may be full. Please export or clear some items and try again.', error);
         throw new Error('Storage limit reached. Please export and clear some lists.');
       }
     }
@@ -59,7 +60,7 @@ class ReadingListManager {
   /**
    * Add a book to a reading list
    * Removes book from other lists first (one list per book rule)
-   * @param {string} listName - 'wantToRead', 'currentlyReading', or 'finished'
+    if (window && window.logger && window.logger.error) window.logger.error('storage read error', e);
    * @param {object} book - Book object with key, title, author_name, etc.
    * @returns {boolean} Success status
    */
@@ -67,7 +68,10 @@ class ReadingListManager {
     try {
       // Validate list name
       if (!['wantToRead', 'currentlyReading', 'finished'].includes(listName)) {
-        console.error('Invalid list name:', listName);
+    if (window && window.logger && window.logger.error) window.logger.error('storage write error', e);
+    if (e && e.name === 'QuotaExceededError' && window && window.reportUserError) {
+      window.reportUserError('Unable to save favorites — storage may be full. Please export and clear some items.');
+    }
         return false;
       }
 
@@ -293,10 +297,24 @@ function _read() {
 }
 
 function _write(arr) {
+  let quotaError = false;
+  let errorDetails = null;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   } catch (e) {
-    console.error('storage write error', e);
+    quotaError = quotaError || (e && e.name === 'QuotaExceededError');
+    errorDetails = errorDetails || e;
+    console.error('localStorage write error', e);
+  }
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch (e) {
+    quotaError = quotaError || (e && e.name === 'QuotaExceededError');
+    errorDetails = errorDetails || e;
+    console.error('sessionStorage write error', e);
+  }
+  if (quotaError && window && window.reportUserError) {
+    window.reportUserError('Unable to save favorites — storage may be full. Please export and clear some items.', errorDetails);
   }
 }
 
