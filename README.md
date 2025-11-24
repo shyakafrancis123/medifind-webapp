@@ -1,85 +1,184 @@
-# MediFind
-ok so, this is my little app. its called MediFind. i made it to look up medicines and see quick info like warnings, dosage, side effects, that kinda thing. its simple, static, js/html/css only, nothing fancy.
-ive used the OpenFDA public apis to get the data.
+MediFind
+
+MediFind is a small single-page app that helps you look up medicines and see clear information like warnings, dosage, indications, approval history, and any recalls. It runs fully on the client side with plain HTML, CSS and JavaScript. No backend. The app uses the public OpenFDA APIs as the data source.
+
+This README explains what the app does, which APIs are used, how the caching works, how to run it locally, and how I deployed it on the ALU web servers with the load balancer.
+
+VIDEO DEMO link: https://youtu.be/G_LwXvSCAFo
+REPO link: https://github.com/shyakafrancis123/medifind-webapp
+
+What the app can do
+
+Live search with a short delay so the API isn’t spammed.
+
+Combined results from three OpenFDA endpoints.
+
+Shows warnings, dosage, indications, product approvals and recall notices in one place.
+
+Local caching to reduce repeat requests.
+
+Favorites saved in localStorage (you can export and import them).
+
+Simple error handling with friendly messages.
+
+Responsive layout with the main sections: Search, Favorites, About, Settings.
+
+The goal was to make something actually useful, not just for fun.
+
+The APIs used (OpenFDA)
+
+These are the exact endpoints the app hits. They are all public, no API key needed.
+
+1. Drug Label
+
+Human-friendly data like warnings, dosage, indications.
+Pattern:
+
+https://api.fda.gov/drug/label.json?search={query}&limit=10
 
 
-MediFind is a small single-page web app that helps users search for medicines and view structured information such as brand/generic names, indications, warnings, dosage, approvals, and recalls. It is a client-side (static) app built with plain HTML/CSS/JavaScript and uses the U.S. Food & Drug Administration (OpenFDA) public APIs as its data source.
+Example query used internally:
+openfda.brand_name:"aspirin" OR openfda.generic_name:"aspirin"
 
-This README covers what the project does, the OpenFDA endpoints used, caching and storage behavior, how to run locally, deployment notes, and a few developer tips.
+2. DrugsFDA
 
-## Features
-- Live search (debounced) across OpenFDA endpoints
-- Consolidated results: label data (human-readable sections), approval metadata (drugsfda), and enforcement/recall notices
-- Favorites persisted in localStorage (export/import available)
-- Simple client-side cache for API responses (TTL configurable)
-- Centralized logging and graceful error handling (see `js/logger.js` and `js/error-handler.js`)
-- Responsive single-page layout with sections: Search, Favorites, About, Settings
+Approval history, sponsor details, product metadata.
+Pattern:
 
-## the APIs i hit (endpoints)
-these are the ones the app uses, raw urls below so you can test direct in browser if you want
-- Label endpoint — human-friendly drug data (indications, warnings, dosage, adverse reactions)
-  - URL pattern: https://api.fda.gov/drug/label.json?search={query}&limit=10
-  - Example encoded query used by the app: openfda.brand_name:"aspirin" OR openfda.generic_name:"aspirin"
+https://api.fda.gov/drug/drugsfda.json?search={query}&limit=5
 
-- Drugs FDA endpoint — approval history and product metadata
-  - URL pattern: https://api.fda.gov/drug/drugsfda.json?search={query}&limit=5
-  - The app uses this to collect approvals, sponsor names, and product-level metadata.
+3. Enforcement (Recalls)
 
-- Enforcement endpoint — recalls and market actions
-  - URL pattern: https://api.fda.gov/drug/enforcement.json?search={query}&limit=10
-  - The app attaches recalls to matching results when the enforcement records mention the product.
+Recall notices and enforcement actions.
+Pattern:
 
-Notes about behavior
-- Endpoints may return 404 when no hits are available for a query — the app treats each endpoint independently and only shows a "no results" message when all three endpoints return nothing for the same query.
-- The app implements a small retry/backoff for transient 5xx/network errors (configured in `js/api.js`).
-- There is no API key required for OpenFDA for lightweight client usage, but the API is rate-limited. The code checks HTTP 429 and surfaces a friendly message.
+https://api.fda.gov/drug/enforcement.json?search={query}&limit=10
 
-## Caching & Storage
-- Client cache: The app keeps a small in-memory and storage-backed cache (key: `medifind_api_cache_v1`) with a default TTL of 10 minutes to reduce duplicate network calls.
-- Favorites: persisted in localStorage under `medifind_favorites_v1` and exported/imported via JSON.
-- Settings: persisted in localStorage under `medifind_settings_v2`.
+API behavior notes
 
-If localStorage writes fail due to quota, the app attempts sessionStorage and uses the centralized `reportUserError()` to inform the user.
+Some endpoints return 404 if nothing is found. I treat each one independently.
 
-## How to run locally
-The app is a static site; any static server will work. You can also open `index.html` directly in your browser, but serving it is recommended for consistent behavior.
+The app only shows “no results found” if all three endpoints have no data.
 
-Example (PowerShell):
+Rate limits exist. If OpenFDA returns 429, the app shows a clear message.
 
-```powershell
-# Run a quick local server from the project root
-python -m http.server 8080
+The app retries small network failures (5xx or timeout) with basic backoff.
 
-## the APIs i hit (endpoints)
-these are the ones the app uses, raw urls below so you can test direct in browser if you want
+Credit to the OpenFDA team for making these APIs publicly available.
 
-- label endpoint (human readable sections: indications, warnings, dosage)
-  - https://api.fda.gov/drug/label.json?search={query}&limit=10
-  - query example used: openfda.brand_name:"aspirin" OR openfda.generic_name:"aspirin"
+Caching and Storage
 
-- drugsfda endpoint (approval history + sponsor/product metadata)
-  - https://api.fda.gov/drug/drugsfda.json?search={query}&limit=5
+API cache
+Stored in localStorage under medifind_api_cache_v1.
+Default TTL: 10 minutes. Falls back to sessionStorage if needed.
 
-- enforcement endpoint (recalls and market actions)
-  - https://api.fda.gov/drug/enforcement.json?search={query}&limit=10
+Favorites
+Stored under medifind_favorites_v1. You can export/import as JSON.
 
-note: sometimes endpoints return 404 if nothing found. the app treats each one separate, and only shows "no results" to user if ALL three returned nothing. so if one is 404 but another has info, you still get results. (i did this because some names only show up in recalls etc)
+Settings
+Stored under medifind_settings_v2.
 
-then open http://localhost:8080 and try searching. easy.
+If the browser blocks storage (quota or private mode), the app shows a useful error through the centralized error handler.
 
-## rate limits / errors
-- OpenFDA is public and has rate limits. if you hit 429 the app will show a friendly message, its not silent.
-- the app retries transient network/server failures small number of times, with backoff (see `js/api.js`).
+How to run the app locally
 
-## testing / things to try
-1) search for "aspirin" or "ibuprofen" and see label + approvals
-2) search for stuff that may only have recalls and see enforcement entries
-3) save a favorite, reload page, check its still there
+This is a fully static site. Any local server works.
 
-## notes / disclaimers
-this is NOT medical advice. its a helper, use official sources for decisions. i know this is obvious but writing it here.
+Quick example using Python:
 
-## repo
+python3 -m http.server 8080
+
+
+Then open:
+
+http://localhost:8080
+
+
+Try searching for things like “aspirin”, “ibuprofen”, or something obscure to see how the recall-only cases look.
+
+Deployment (Web01, Web02, Load Balancer)
+
+I deployed the app on both ALU web servers and then configured the load balancer so all traffic is distributed evenly.
+
+Steps I followed
+1. Clone the repo on both servers
+cd /var/www
+sudo git clone https://github.com/shyakafrancis123/medifind-webapp
+
+2. Set permissions
+sudo chown -R ubuntu:ubuntu /var/www/medifind-webapp
+
+3. Point Nginx to the project folder
+
+In /etc/nginx/sites-available/default on both servers:
+
+root /var/www/medifind-webapp;
+index index.html;
+
+
+Then reload:
+
+sudo systemctl reload nginx
+
+4. Configure the load balancer (lb01)
+
+I updated the Nginx config to pass incoming traffic to both servers:
+
+upstream medifind_upstream {
+    server 6920-web-01;
+    server 6920-web-02;
+}
+
+server {
+    listen 80;
+    location / {
+        proxy_pass http://medifind_upstream;
+    }
+}
+
+
+Then reload:
+
+sudo systemctl reload nginx
+
+Testing the deployment
+
+I accessed the app through the load balancer IP and confirmed that page loads were switching between Web01 and Web02.
+
+Both servers returned the same files since they share the same repo.
+
+API requests worked normally since everything is client-side.
+
+Things to test
+
+Search for “aspirin” and check label + approvals.
+
+Search for something that only has recalls and see how recall data is shown.
+
+Add items to favorites, refresh the page, confirm persistence.
+
+Try fast repeated searches to see caching kick in and reduce delay.
+
+Error handling
+
+The app shows clear messages for:
+
+No results found.
+
+Rate limit hits.
+
+Network failures.
+
+Unexpected OpenFDA responses.
+
+LocalStorage issues.
+
+The centralized logic is inside js/api.js, js/logger.js, and js/error-handler.js.
+
+Notes / disclaimer
+
+This app is not for medical decisions. It’s just a quick lookup helper.
+
+Repository
+
 https://github.com/shyakafrancis123/medifind-webapp
-
--- end
