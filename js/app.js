@@ -456,21 +456,16 @@ async function doSearch() {
   toggleSearchOverlay(true);
   try {
     const results = await window.searchDrugs(term);
+    clearError(); // Clear any previous errors when search succeeds
     currentResults = results;
     updateManufacturerDropdown(results);
     applyFiltersAndSort();
     setFeedback(`Found ${results.length} result${results.length === 1 ? '' : 's'}`);
   } catch (err) {
     if (window && window.logger && window.logger.error) window.logger.error('search error', err);
-    // Show specific user-facing messages for expected cases
+    // Show user-facing error message
     const msg = err && err.message ? err.message : 'Search failed. Try again.';
-    // If it's a developer/network error, provide an actionable banner
-    const lowLevel = !(msg && (msg.toLowerCase().includes('no medication') || msg.toLowerCase().includes('no results') || msg.toLowerCase().includes('please enter') || msg.toLowerCase().includes('rate limit')));
-    if (lowLevel && window && window.reportUserError) {
-      window.reportUserError('Search failed due to a network or server issue. Please try again in a moment.', err);
-    } else {
-      showError(msg);
-    }
+    showError(msg);
     setFeedback('Found 0 results');
   } finally {
     showLoading(false);

@@ -88,11 +88,15 @@ window.searchDrugs = async function(q) {
   const encoded = encodeURIComponent(`openfda.brand_name:"${q}" OR openfda.generic_name:"${q}"`);
   const labelUrl = `https://api.fda.gov/drug/label.json?search=${encoded}&limit=10`;
   let labelData = null, drugsfdaData = null, enforcementData = null;
+  let rateLimited = false;
 
   try {
     const r = await fetchWithRetry(labelUrl);
-    if (!r.ok) _handleResponseError(r);
-    labelData = await r.json();
+    if (r.ok) labelData = await r.json();
+    else {
+      if (r.status === 429) rateLimited = true;
+      if (window && window.logger && window.logger.warn) window.logger.warn('label status', r.status);
+    }
   } catch (err) {
     if (window && window.logger && window.logger.warn) window.logger.warn('label fetch error', err && err.message ? err.message : err);
   }
@@ -101,7 +105,10 @@ window.searchDrugs = async function(q) {
     const dfUrl = `https://api.fda.gov/drug/drugsfda.json?search=${encoded}&limit=5`;
     const r2 = await fetchWithRetry(dfUrl);
     if (r2.ok) drugsfdaData = await r2.json();
-    else if (window && window.logger && window.logger.warn) window.logger.warn('drugsfda status', r2.status);
+    else {
+      if (r2.status === 429) rateLimited = true;
+      if (window && window.logger && window.logger.warn) window.logger.warn('drugsfda status', r2.status);
+    }
   } catch (err) {
     if (window && window.logger && window.logger.warn) window.logger.warn('drugsfda fetch error', err && err.message ? err.message : err);
   }
@@ -111,6 +118,9 @@ window.searchDrugs = async function(q) {
     const enfUrl = `https://api.fda.gov/drug/enforcement.json?search=${encEnf}&limit=10`;
     const r3 = await fetchWithRetry(enfUrl);
     if (r3.ok) enforcementData = await r3.json();
+    else {
+      if (r3.status === 429) rateLimited = true;
+    }
   } catch (err) {
     if (window && window.logger && window.logger.warn) window.logger.warn('enforcement fetch error', err && err.message ? err.message : err);
   }
@@ -201,8 +211,13 @@ window.searchDrugs = async function(q) {
     }
   }
 
+  // Check for rate limiting first
+  if (rateLimited && !results.length) {
+    throw new Error('Rate limit exceeded (OpenFDA). Please try again later.');
+  }
+
   if (!results.length) {
-    const msg = 'LIVE SEARCH IN PROGRESS.';
+    const msg = 'No medication results found for that name. Try different spelling or a brand/generic name.';
     throw new Error(msg);
   }
 

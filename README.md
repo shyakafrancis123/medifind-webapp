@@ -40,13 +40,25 @@ https://api.fda.gov/drug/enforcement.json?search={query}&limit=10
 ***********API behavior notes************
 -Some endpoints return 404 if nothing is found. That is why I treat each one independently.
 
--The app only shows “no results found” if all three endpoints have no data.
+-The app only shows "no results found" if all three endpoints have no data.
 
 -Rate limits exist. If OpenFDA returns 429, the app shows a clear message.
 
 -The app retries small network failures (5xx or timeout) with basic backoff.
 
 -I Credit the OpenFDA team for making these APIs publicly available.
+
+***********Error handling logic***********
+The app uses a graceful degradation strategy for searches:
+-Each of the three endpoints (label, drugsfda, enforcement) is queried independently
+-If one endpoint fails (404 or error), the others can still succeed
+-Results from all working endpoints are merged together
+-The app ONLY shows an error if ALL three endpoints return no data
+-During live search, errors are cleared immediately when a new search succeeds so old error messages dont persist
+-Rate limit detection: if any endpoint returns 429, the app tracks it and shows a specific rate-limit message instead of a generic error
+-This means you can get partial results (like only label data or only recall data) and the search is still considered successful
+
+Example: if you search "panadol" and the label endpoint returns 404 but drugsfda returns 9 results, you'll see those 9 results with no error message.
 
 Caching and Storage
 
